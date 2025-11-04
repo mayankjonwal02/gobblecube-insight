@@ -15,19 +15,16 @@ interface QuadrantScatterProps {
 const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
   const navigate = useNavigate();
 
-  const getColor = (quadrant?: string) => {
-    switch (quadrant) {
-      case "Healthy":
-        return "#22C55E";
-      case "Active but Dormant":
-        return "#F59E0B";
-      case "At Risk":
-        return "#8B5CF6";
-      case "Inactive & Dormant":
-        return "#EF4444";
-      default:
-        return "#94A3B8";
-    }
+  const getColorByPosition = (x: number, y: number) => {
+    // Quadrant I (x > 5, y > 5): Red - Inactive & Dormant
+    // Quadrant II (x <= 5, y > 5): Purple - At Risk
+    // Quadrant III (x <= 5, y <= 5): Green - Healthy
+    // Quadrant IV (x > 5, y <= 5): Yellow - Active but Dormant
+    
+    if (x > 5 && y > 5) return "#EF4444"; // Red - Q1
+    if (x <= 5 && y > 5) return "#8B5CF6"; // Purple - Q2
+    if (x <= 5 && y <= 5) return "#22C55E"; // Green - Q3
+    return "#F59E0B"; // Yellow - Q4
   };
 
   const chartData = data.map((item) => ({
@@ -36,6 +33,7 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
     name: "account_name" in item ? item.account_name : item.workspace_name,
     quadrant: item.quadrant,
     id: "account_id" in item ? item.account_id : item.workspace_id,
+    color: getColorByPosition(item.avg_inactive_days, item.avg_days_ago),
   }));
 
   const handleExport = () => {
@@ -63,7 +61,7 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
           <p className="text-xs mt-1">
             <span
               className="inline-block w-2 h-2 rounded-full mr-1"
-              style={{ backgroundColor: getColor(data.quadrant) }}
+              style={{ backgroundColor: data.color }}
             />
             {data.quadrant}
           </p>
@@ -99,6 +97,7 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
                 name="Avg Inactive Days"
                 label={{ value: "Avg Inactive Days (Chat)", position: "bottom", offset: 20 }}
                 stroke="hsl(var(--muted-foreground))"
+                domain={[0, 'auto']}
               />
               <YAxis
                 type="number"
@@ -106,7 +105,11 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
                 name="Avg Days Ago"
                 label={{ value: "Avg Days Ago (Login)", angle: -90, position: "left", offset: 10 }}
                 stroke="hsl(var(--muted-foreground))"
+                domain={[0, 'auto']}
               />
+              {/* Quadrant reference lines */}
+              <line x1="5" y1="0" x2="5" y2="100%" stroke="hsl(var(--border))" strokeWidth={2} strokeDasharray="5 5" />
+              <line x1="0" y1="5" x2="100%" y2="5" stroke="hsl(var(--border))" strokeWidth={2} strokeDasharray="5 5" />
               <Tooltip content={<CustomTooltip />} />
               <Scatter
                 data={chartData}
@@ -118,7 +121,7 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
                 }}
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={getColor(entry.quadrant)} opacity={0.8} />
+                  <Cell key={`cell-${index}`} fill={entry.color} opacity={0.8} />
                 ))}
               </Scatter>
             </ScatterChart>
@@ -128,10 +131,10 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
         {/* Legend */}
         <div className="flex flex-wrap gap-4 justify-center mt-6">
           {[
-            { label: "Healthy Accounts", color: "#22C55E" },
-            { label: "Active but Dormant", color: "#F59E0B" },
-            { label: "At Risk", color: "#8B5CF6" },
-            { label: "Inactive & Dormant", color: "#EF4444" },
+            { label: "Quadrant III - Healthy", color: "#22C55E" },
+            { label: "Quadrant IV - Active but Dormant", color: "#F59E0B" },
+            { label: "Quadrant II - At Risk", color: "#8B5CF6" },
+            { label: "Quadrant I - Inactive & Dormant", color: "#EF4444" },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />

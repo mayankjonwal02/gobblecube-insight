@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import gobblecubeLogo from "@/assets/gobblecube-logo.png";
 
 const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState("30");
@@ -46,9 +47,7 @@ const Dashboard = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center">
-                <BarChart3 className="w-6 h-6 text-primary-foreground" />
-              </div>
+              <img src={gobblecubeLogo} alt="Gobblecube" className="w-10 h-10" />
               <div>
                 <h1 className="text-2xl font-bold">Account-Level Dashboard</h1>
                 <p className="text-sm text-muted-foreground">Gobblecube Customer Success Portal</p>
