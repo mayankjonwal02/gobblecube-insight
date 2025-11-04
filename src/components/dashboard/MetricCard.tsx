@@ -63,14 +63,14 @@ const MetricCard = ({ title, value, icon, trend, onClick, variant = "default" }:
     >
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        <Button
+        {/* <Button
           variant="ghost"
           size="icon"
           className="h-8 w-8"
           onClick={handleExport}
         >
           <Download className="h-4 w-4" />
-        </Button>
+        </Button> */}
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-between">

@@ -6,6 +6,7 @@ import QuadrantScatter from "@/components/dashboard/QuadrantScatter";
 import { accountLevelData } from "@/data/dummyData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useNavigate } from "react-router-dom";
 import {
   Select,
   SelectContent,
@@ -18,7 +19,7 @@ import gobblecubeLogo from "@/assets/gobblecube-logo.png";
 const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState("30");
   const [filterStatus, setFilterStatus] = useState<string>("");
-
+  const navigate = useNavigate();
   const totalActive = accountLevelData.filter(
     (a) => a.account_status === "Active"
   ).length;
@@ -144,12 +145,12 @@ const Dashboard = () => {
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" onClick={() => navigate(`/workspace/${account.account_id}`)}>
                       View Details
                     </Button>
-                    <Button size="sm">
+                    {/* <Button size="sm">
                       Notify Manager
-                    </Button>
+                    </Button>*/}
                   </div>
                 </div>
               ))}

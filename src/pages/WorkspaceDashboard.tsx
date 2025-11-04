@@ -36,13 +36,13 @@ const WorkspaceDashboard = () => {
 
   const account = accountLevelData.find((a) => a.account_id === accountId);
   const allWorkspaces = workspaceLevelData.filter((w) => w.account_id === accountId);
-  
+
   const workspaces = allWorkspaces.filter((workspace) => {
-    const matchesSearch = 
+    const matchesSearch =
       workspace.workspace_name.toLowerCase().includes(search.toLowerCase()) ||
       workspace.workspace_id.toLowerCase().includes(search.toLowerCase());
     const matchesRegion = regionFilter === "all" || workspace.quadrant === regionFilter;
-    const matchesInactiveDays = 
+    const matchesInactiveDays =
       inactiveDaysFilter === "all" ||
       (inactiveDaysFilter === "0-5" && workspace.avg_inactive_days <= 5) ||
       (inactiveDaysFilter === "6-10" && workspace.avg_inactive_days > 5 && workspace.avg_inactive_days <= 10) ||
@@ -76,11 +76,57 @@ const WorkspaceDashboard = () => {
   ).length;
 
   const handleExport = () => {
+    if (!workspaces.length) {
+      toast({
+        title: "No Data",
+        description: "There is no workspace data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // CSV headers
+    const headers = [
+      "Workspace Name",
+      "Avg Days Ago",
+      "Avg Inactive Days",
+      "Chat Count",
+      "Status",
+      "Account Region",
+      "Risk Level",
+    ];
+
+    // Map workspace data to CSV rows
+    const csvRows = [
+      headers.join(","), // header row
+      ...workspaces.map((w) =>
+        [
+          `"${w.workspace_name}"`,
+          w.avg_days_ago.toFixed(1),
+          w.avg_inactive_days.toFixed(1),
+          w.chat_count,
+          `"${w.account_status}"`,
+          `"${w.quadrant}"`,
+          `"${w.risk_level}"`,
+        ].join(",")
+      ),
+    ];
+
+    // Create CSV blob and trigger download
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `workspace_data_${accountId || "unknown"}_${new Date().toISOString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
     toast({
-      title: "Export Started",
-      description: "Downloading workspace data as CSV...",
+      title: "Export Successful",
+      description: "Workspace data exported as CSV.",
     });
   };
+
 
   const getQuadrantBadge = (quadrant?: string) => {
     const variants: Record<string, string> = {
@@ -89,7 +135,7 @@ const WorkspaceDashboard = () => {
       "At Risk": "bg-quadrant-at-risk/10 text-quadrant-at-risk border-quadrant-at-risk/20",
       "Inactive & Dormant": "bg-destructive/10 text-destructive border-destructive/20",
     };
-    
+
     return <Badge className={quadrant ? variants[quadrant] : ""}>{quadrant || "Unknown"}</Badge>;
   };
 
@@ -225,43 +271,43 @@ const WorkspaceDashboard = () => {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               <div className="border rounded-lg overflow-hidden">
                 <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Workspace Name</TableHead>
-                    <TableHead>Avg Days Ago</TableHead>
-                    <TableHead>Avg Inactive Days</TableHead>
-                    <TableHead>Chat Count</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Account Region</TableHead>
-                    <TableHead>Risk Level</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {workspaces.map((workspace) => (
-                    <TableRow key={workspace.workspace_id} className="hover:bg-muted/50">
-                      <TableCell className="font-medium">{workspace.workspace_name}</TableCell>
-                      <TableCell>{workspace.avg_days_ago.toFixed(1)}</TableCell>
-                      <TableCell>{workspace.avg_inactive_days.toFixed(1)}</TableCell>
-                      <TableCell>{workspace.chat_count}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{workspace.account_status}</Badge>
-                      </TableCell>
-                      <TableCell>{getQuadrantBadge(workspace.quadrant)}</TableCell>
-                      <TableCell>
-                        <Badge>{workspace.risk_level}</Badge>
-                      </TableCell>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Workspace Name</TableHead>
+                      <TableHead>Avg Days Ago</TableHead>
+                      <TableHead>Avg Inactive Days</TableHead>
+                      <TableHead>Chat Count</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Account Region</TableHead>
+                      <TableHead>Risk Level</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            
-            <div className="text-sm text-muted-foreground mt-4">
-              Showing {workspaces.length} of {allWorkspaces.length} workspaces
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {workspaces.map((workspace) => (
+                      <TableRow key={workspace.workspace_id} className="hover:bg-muted/50">
+                        <TableCell className="font-medium">{workspace.workspace_name}</TableCell>
+                        <TableCell>{workspace.avg_days_ago.toFixed(1)}</TableCell>
+                        <TableCell>{workspace.avg_inactive_days.toFixed(1)}</TableCell>
+                        <TableCell>{workspace.chat_count}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{workspace.account_status}</Badge>
+                        </TableCell>
+                        <TableCell>{getQuadrantBadge(workspace.quadrant)}</TableCell>
+                        <TableCell>
+                          <Badge>{workspace.risk_level}</Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="text-sm text-muted-foreground mt-4">
+                Showing {workspaces.length} of {allWorkspaces.length} workspaces
+              </div>
             </div>
           </CardContent>
         </Card>

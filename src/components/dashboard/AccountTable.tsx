@@ -70,12 +70,60 @@ const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
       return ((aValue as number) - (bValue as number)) * modifier;
     });
 
-  const handleExport = () => {
+// ✅ Updated handleExport to download CSV
+const handleExport = () => {
+  if (!filteredData.length) {
     toast({
-      title: "Export Started",
-      description: "Downloading account data as CSV...",
+      title: "No Data",
+      description: "There is no data to export.",
+      variant: "destructive",
     });
-  };
+    return;
+  }
+
+  const headers = [
+    "Account Name",
+    "Account ID",
+    "Avg Days Ago",
+    "Avg Inactive Days",
+    "Workspaces",
+    "Chat Count",
+    "Status",
+    "Quadrant",
+    "Risk Level",
+  ];
+
+  const csvRows = [
+    headers.join(","), // header row
+    ...filteredData.map((account) =>
+      [
+        `"${account.account_name}"`,
+        `"${account.account_id}"`,
+        account.avg_days_ago.toFixed(1),
+        account.avg_inactive_days.toFixed(1),
+        account.workspace_count,
+        account.chat_count,
+        `"${account.account_status}"`,
+        `"${account.quadrant}"`,
+        `"${account.risk_level}"`,
+      ].join(",")
+    ),
+  ];
+
+  const csvContent = csvRows.join("\n");
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `account_data_${new Date().toISOString()}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+
+  toast({
+    title: "Export Successful",
+    description: "Account data exported as CSV.",
+  });
+};
+
 
   const getQuadrantBadge = (quadrant?: string) => {
     const variants: Record<string, { color: string; className: string }> = {
