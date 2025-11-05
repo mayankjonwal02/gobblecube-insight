@@ -25,6 +25,15 @@ const Login = () => {
       return;
     }
 
+    if (email !== "admin@gobblecube.ai" || password !== "admin") {
+      toast({
+        title: "Error",
+        description: "Invalid email or password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Mock login
     toast({
       title: "Welcome back!",

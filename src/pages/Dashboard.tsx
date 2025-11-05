@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Users, TrendingDown, AlertTriangle, MessageSquare, BarChart3, Calendar } from "lucide-react";
 import MetricCard from "@/components/dashboard/MetricCard";
 import AccountTable from "@/components/dashboard/AccountTable";
 import QuadrantScatter from "@/components/dashboard/QuadrantScatter";
-import { accountLevelData } from "@/data/dummyData";
+// import { accountLevelData } from "@/data/dummyData";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -20,26 +20,49 @@ const Dashboard = () => {
   const [dateFilter, setDateFilter] = useState("30");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const navigate = useNavigate();
-  const totalActive = accountLevelData.filter(
-    (a) => a.account_status === "Active"
-  ).length;
-  const totalChurned = accountLevelData.filter(
-    (a) => a.account_status === "Churned"
-  ).length;
-  const totalAtRisk = accountLevelData.filter(
-    (a) => a.quadrant === "At Risk" || a.quadrant === "Inactive & Dormant"
-  ).length;
-  const avgEngagement = (
-    accountLevelData.reduce((sum, a) => sum + a.chat_count, 0) / accountLevelData.length
-  ).toFixed(1);
-  const avgChat = (
-    accountLevelData.reduce((sum, a) => sum + a.chat_count, 0) / accountLevelData.length
-  ).toFixed(1);
+  const [totalActive, setTotalActive] = useState(0);
+  const [totalChurned, setTotalChurned] = useState(0);
+  const [totalAtRisk, setTotalAtRisk] = useState(0);
+  const [avgEngagement, setAvgEngagement] = useState(0);
+  const [avgChat, setAvgChat] = useState(0);
+  const [accountLevelData, setAccountLevelData] = useState([]);
+  useEffect(() => {
+    fetch("http://localhost:8000/account-level/card-data")
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      setTotalActive(data.total_active_accounts);
+      setTotalChurned(data.total_churned_accounts);
+      setTotalAtRisk(data.at_risk_accounts);
+      setAvgEngagement(data.avg_engagement_score);
+      setAvgChat(data.avg_chat_activity);
+    })
+    .catch(error => {
+      console.error("Error fetching card data:", error);
+    });
+  }, []);
+
+
+  useEffect(() => {
+    fetch("http://localhost:8000/account-level/info")
+    .then(response => response.json())
+    .then(data => {
+      console.log(data);
+      setAccountLevelData(data);
+    })
+    .catch(error => {
+      console.error("Error fetching card data:", error);
+    });
+  }, []);
+
+
 
   const atRiskAccounts = accountLevelData
     .filter((a) => a.quadrant === "At Risk" || a.quadrant === "Inactive & Dormant")
     .sort((a, b) => b.avg_inactive_days - a.avg_inactive_days)
     .slice(0, 5);
+
+  console.log(atRiskAccounts)
 
   return (
     <div className="min-h-screen bg-background">

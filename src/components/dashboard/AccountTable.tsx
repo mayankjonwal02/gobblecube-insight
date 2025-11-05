@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
+import {getRiskLevel} from "@/data/dummyData"
 interface AccountTableProps {
   data: AccountData[];
   filterStatus?: string;
@@ -46,12 +46,12 @@ const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
 
   const filteredData = data
     .filter((account) => {
-      const matchesSearch = 
+      const matchesSearch =
         account.account_name.toLowerCase().includes(search.toLowerCase()) ||
         account.account_id.toLowerCase().includes(search.toLowerCase());
       const matchesFilter = !filterStatus || account.quadrant === filterStatus;
       const matchesRegion = regionFilter === "all" || account.quadrant === regionFilter;
-      const matchesInactiveDays = 
+      const matchesInactiveDays =
         inactiveDaysFilter === "all" ||
         (inactiveDaysFilter === "0-5" && account.avg_inactive_days <= 5) ||
         (inactiveDaysFilter === "6-10" && account.avg_inactive_days > 5 && account.avg_inactive_days <= 10) ||
@@ -63,76 +63,76 @@ const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
       const modifier = sortDirection === "asc" ? 1 : -1;
-      
+
       if (typeof aValue === "string" && typeof bValue === "string") {
         return aValue.localeCompare(bValue) * modifier;
       }
       return ((aValue as number) - (bValue as number)) * modifier;
     });
 
-// ✅ Updated handleExport to download CSV
-const handleExport = () => {
-  if (!filteredData.length) {
+  // ✅ Updated handleExport to download CSV
+  const handleExport = () => {
+    if (!filteredData.length) {
+      toast({
+        title: "No Data",
+        description: "There is no data to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const headers = [
+      "Account Name",
+      "Account ID",
+      "Avg Days Ago",
+      "Avg Inactive Days",
+      "Workspaces",
+      "Chat Count",
+      "Status",
+      "Quadrant",
+      "Risk Level",
+    ];
+
+    const csvRows = [
+      headers.join(","), // header row
+      ...filteredData.map((account) =>
+        [
+          `"${account.account_name}"`,
+          `"${account.account_id}"`,
+          account.avg_days_ago.toFixed(1),
+          account.avg_inactive_days.toFixed(1),
+          account.workspace_count,
+          account.chat_count,
+          `"${account.account_status}"`,
+          `"${account.quadrant}"`,
+          `"${getRiskLevel(account.quadrant)}"`,
+        ].join(",")
+      ),
+    ];
+
+    const csvContent = csvRows.join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `account_data_${new Date().toISOString()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+
     toast({
-      title: "No Data",
-      description: "There is no data to export.",
-      variant: "destructive",
+      title: "Export Successful",
+      description: "Account data exported as CSV.",
     });
-    return;
-  }
-
-  const headers = [
-    "Account Name",
-    "Account ID",
-    "Avg Days Ago",
-    "Avg Inactive Days",
-    "Workspaces",
-    "Chat Count",
-    "Status",
-    "Quadrant",
-    "Risk Level",
-  ];
-
-  const csvRows = [
-    headers.join(","), // header row
-    ...filteredData.map((account) =>
-      [
-        `"${account.account_name}"`,
-        `"${account.account_id}"`,
-        account.avg_days_ago.toFixed(1),
-        account.avg_inactive_days.toFixed(1),
-        account.workspace_count,
-        account.chat_count,
-        `"${account.account_status}"`,
-        `"${account.quadrant}"`,
-        `"${account.risk_level}"`,
-      ].join(",")
-    ),
-  ];
-
-  const csvContent = csvRows.join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = `account_data_${new Date().toISOString()}.csv`;
-  link.click();
-  URL.revokeObjectURL(link.href);
-
-  toast({
-    title: "Export Successful",
-    description: "Account data exported as CSV.",
-  });
-};
+  };
 
 
   const getQuadrantBadge = (quadrant?: string) => {
     const variants: Record<string, { color: string; className: string }> = {
-      "Healthy": { color: "success", className: "bg-success/10 text-success border-success/20" },
+      "Healthy Accounts": { color: "success", className: "bg-success/10 text-success border-success/20" },
       "Active but Dormant": { color: "warning", className: "bg-warning/10 text-warning border-warning/20" },
       "At Risk": { color: "purple", className: "bg-quadrant-at-risk/10 text-quadrant-at-risk border-quadrant-at-risk/20" },
       "Inactive & Dormant": { color: "destructive", className: "bg-destructive/10 text-destructive border-destructive/20" },
     };
-    
+
     const variant = quadrant ? variants[quadrant] : variants["Healthy"];
     return <Badge className={variant.className}>{quadrant || "Unknown"}</Badge>;
   };
@@ -144,7 +144,7 @@ const handleExport = () => {
       "High": "bg-quadrant-at-risk/10 text-quadrant-at-risk border-quadrant-at-risk/20",
       "Critical": "bg-destructive/10 text-destructive border-destructive/20",
     };
-    
+
     return <Badge className={risk ? variants[risk] : ""}>{risk || "Unknown"}</Badge>;
   };
 
@@ -222,28 +222,37 @@ const handleExport = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredData.map((account) => (
-              <TableRow
-                key={account.account_id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
-                onClick={() => navigate(`/workspace/${account.account_id}`)}
-              >
-                <TableCell className="font-medium">{account.account_name}</TableCell>
-                <TableCell className="text-muted-foreground font-mono text-xs">
-                  {account.account_id.slice(0, 8)}...
+            {filteredData.length > 0 ? (
+              filteredData.map((account) => (
+                <TableRow
+                  key={account.account_id}
+                  className="cursor-pointer hover:bg-muted/50 transition-colors"
+                  onClick={() => navigate(`/workspace/${account.account_id}`)}
+                >
+                  <TableCell className="font-medium">{account.account_name}</TableCell>
+                  <TableCell className="text-muted-foreground font-mono text-xs">
+                    {account.account_id.slice(0, 8)}...
+                  </TableCell>
+                  <TableCell>{account.avg_days_ago.toFixed(1)}</TableCell>
+                  <TableCell>{account.avg_inactive_days.toFixed(1)}</TableCell>
+                  <TableCell>{account.workspace_count}</TableCell>
+                  <TableCell>{account.chat_count}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{account.account_status}</Badge>
+                  </TableCell>
+                  <TableCell>{getQuadrantBadge(account.quadrant)}</TableCell>
+                  <TableCell>{getRiskBadge(getRiskLevel(account.quadrant))}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={9} className="text-center text-muted-foreground py-6">
+                  No account data available
                 </TableCell>
-                <TableCell>{account.avg_days_ago.toFixed(1)}</TableCell>
-                <TableCell>{account.avg_inactive_days.toFixed(1)}</TableCell>
-                <TableCell>{account.workspace_count}</TableCell>
-                <TableCell>{account.chat_count}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{account.account_status}</Badge>
-                </TableCell>
-                <TableCell>{getQuadrantBadge(account.quadrant)}</TableCell>
-                <TableCell>{getRiskBadge(account.risk_level)}</TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
+
         </Table>
       </div>
 

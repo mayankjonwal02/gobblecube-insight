@@ -76,7 +76,7 @@ const MetricCard = ({ title, value, icon, trend, onClick, variant = "default" }:
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="text-3xl font-bold">{value}</div>
-            {trend && (
+            {/* {trend && (
               <div className="flex items-center gap-1 text-sm">
                 {trend.isPositive ? (
                   <ArrowUp className="h-4 w-4 text-success" />
@@ -88,7 +88,7 @@ const MetricCard = ({ title, value, icon, trend, onClick, variant = "default" }:
                 </span>
                 <span className="text-muted-foreground">from last period</span>
               </div>
-            )}
+            )} */}
           </div>
           <div className={`rounded-2xl p-3 ${getIconBgStyles()}`}>
             {icon}

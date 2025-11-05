@@ -33,8 +33,8 @@ const getQuadrant = (avgDaysAgo: number, avgInactiveDays: number): string => {
 };
 
 // Helper function to determine risk level
-const getRiskLevel = (quadrant: string): string => {
-  if (quadrant === "Healthy") return "Low";
+export const getRiskLevel = (quadrant: string): string => {
+  if (quadrant === "Healthy Accounts") return "Low";
   if (quadrant === "Active but Dormant") return "Medium";
   if (quadrant === "At Risk") return "High";
   return "Critical";
