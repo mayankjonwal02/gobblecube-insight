@@ -59,7 +59,7 @@ const MetricCard = ({ title, value, icon, trend, onClick, variant = "default" }:
       className={`transition-all duration-300 ${getVariantStyles()} ${
         onClick ? "cursor-pointer" : ""
       }`}
-      onClick={onClick}
+      // onClick={onClick}
     >
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -75,7 +75,7 @@ const MetricCard = ({ title, value, icon, trend, onClick, variant = "default" }:
       <CardContent>
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <div className="text-3xl font-bold">{value}</div>
+            <div className="text-xl font-bold">{value}</div>
             {/* {trend && (
               <div className="flex items-center gap-1 text-sm">
                 {trend.isPositive ? (

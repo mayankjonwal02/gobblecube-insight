@@ -144,6 +144,8 @@ const Dashboard = () => {
           data={accountLevelData}
           title="Account Engagement Quadrant Analysis"
           type="account"
+          median_days_ago={0}
+          median_inactivity={0}
         />
 
         {/* Risk Summary Panel */}

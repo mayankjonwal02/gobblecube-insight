@@ -33,35 +33,39 @@ interface QuadrantScatterProps {
   data: AccountData[] | WorkspaceData[];
   title: string;
   type: "account" | "workspace";
+  median_days_ago : number  ,
+  median_inactivity : number
 }
 
-const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
+const QuadrantScatter = ({ data, title, type ,median_days_ago ,median_inactivity }: QuadrantScatterProps) => {
   const navigate = useNavigate();
   const chartRef = useRef<HTMLDivElement>(null);
 
   // ✅ Median-based centering
   const inactiveDays = data.map((d) => d.avg_inactive_days);
   const daysAgo = data.map((d) => d.avg_days_ago);
-  const medianInactive = calculateMedian(inactiveDays);
-  const medianDaysAgo = calculateMedian(daysAgo);
+  const medianInactive = type === "account"?calculateMedian(inactiveDays):median_inactivity;
+  const medianDaysAgo = type === "account"?calculateMedian(daysAgo):median_days_ago;
 
   const chartData = data.map((item) => {
     const adjustedX = item.avg_inactive_days - medianInactive;
     const adjustedY = item.avg_days_ago - medianDaysAgo;
-
+  
     let quadrant = "Healthy (III)";
-    if (adjustedX > 0 && adjustedY > 0) quadrant = "Inactive & Dormant (I)";
-    else if (adjustedX < 0 && adjustedY > 0) quadrant = "At Risk (II)";
-    else if (adjustedX < 0 && adjustedY < 0) quadrant = "Healthy (III)";
-    else if (adjustedX > 0 && adjustedY < 0) quadrant = "Active but Dormant (IV)";
-
+    const eps = 0.0001;
+    if (adjustedX >= -eps && adjustedY >= -eps) quadrant = "Inactive & Dormant (I)";
+    else if (adjustedX < -eps && adjustedY >= -eps) quadrant = "At Risk (II)";
+    else if (adjustedX < -eps && adjustedY < -eps) quadrant = "Healthy (III)";
+    else if (adjustedX >= -eps && adjustedY < -eps) quadrant = "Active but Dormant (IV)";
+    
+  
     const colorMap: Record<string, string> = {
       "Inactive & Dormant (I)": "#EF4444",
       "At Risk (II)": "#8B5CF6",
       "Healthy (III)": "#22C55E",
       "Active but Dormant (IV)": "#F59E0B",
     };
-
+  
     return {
       x: adjustedX,
       y: adjustedY,
@@ -69,8 +73,14 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
       id: "account_id" in item ? item.account_id : item.workspace_id,
       quadrant,
       color: colorMap[quadrant],
+      workspace_name : "workspace_name" in item ? item.workspace_name : "",
+  
+      // 🔽 keep originals for tooltip
+      actual_inactive: item.avg_inactive_days,
+      actual_days_ago: item.avg_days_ago,
     };
   });
+  
 
   // ✅ Determine initial symmetric range
   const maxRange = Math.max(
@@ -120,15 +130,16 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const d = payload[0].payload;
+      console.log("Payload:",d)
       return (
         <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
-          <p className="font-semibold text-sm mb-1">{d.name}</p>
+          <p className="font-semibold text-sm mb-1">{type === "account"?d.name:d.workspace_name}</p>
           <p className="text-xs text-muted-foreground">
-            Adj. Inactive Days: {d.x.toFixed(1)}
+            Inactive Days: {d.actual_inactive }
           </p>
           <p className="text-xs text-muted-foreground">
-            Adj. Days Ago: {d.y.toFixed(1)}
-          </p>
+            Days Ago: {d.actual_days_ago  }
+          </p> 
           <p className="text-xs mt-1">
             <span
               className="inline-block w-2 h-2 rounded-full mr-1"
@@ -136,6 +147,8 @@ const QuadrantScatter = ({ data, title, type }: QuadrantScatterProps) => {
             />
             {d.quadrant}
           </p>
+
+       
         </div>
       );
     }

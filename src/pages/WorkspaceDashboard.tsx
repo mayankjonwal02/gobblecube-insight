@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Building2, MessageSquare, AlertTriangle, Activity, Filter, Search } from "lucide-react";
 import gobblecubeLogo from "@/assets/gobblecube-logo.png";
@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import MetricCard from "@/components/dashboard/MetricCard";
 import QuadrantScatter from "@/components/dashboard/QuadrantScatter";
+import { getRiskLevel } from "@/data/dummyData"
 import { workspaceLevelData, accountLevelData } from "@/data/dummyData";
 import {
   Table,
@@ -26,6 +27,65 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert } from "@/components/ui/alert";
+
+
+interface Account {
+  account_id: string;
+  account_name: string;
+  avg_days_since_login: number;
+  avg_inactive_days: number;
+  total_workspaces: number;
+  chat_count: number;
+  status: string;
+  color?: string;
+  Quadrant?: string;
+}
+
+
+// types.ts
+export interface Workspace {
+  account_id: string;
+  workspace_id: string;
+  account_name: string; // normalized key name
+  workspace_name: string;
+  avg_days_ago: number;
+  avg_inactive_days: number;
+  chat_count: number;
+  account_status: string;
+  color?: string;
+  quadrant?: string;
+}
+
+export interface WorkspaceResponse {
+  workspaces: Workspace[];
+  median_avg_days_ago: number;
+  median_avg_inactive_days: number;
+}
+
+function getQuadrant(
+  avgInactiveDays: number,
+  avgDaysAgo: number,
+  medianInactive: number,
+  medianDaysAgo: number
+): string {
+  console.log("avg inactive"+avgInactiveDays,
+    "avgdayago"+avgDaysAgo,
+    "medianinactive"+medianInactive,
+    "mediandaysago"+medianDaysAgo)
+  const adjustedX = avgInactiveDays - medianInactive;
+  const adjustedY = avgDaysAgo - medianDaysAgo; 
+
+  const eps = 0.0001; // tolerance for boundary conditions
+  let quadrant = "Healthy (III)";
+
+  if (adjustedX >= -eps && adjustedY >= -eps) quadrant = "Inactive & Dormant";
+  else if (adjustedX < -eps && adjustedY >= -eps) quadrant = "At Risk";
+  else if (adjustedX < -eps && adjustedY < -eps) quadrant = "Healthy Accounts";
+  else if (adjustedX >= -eps && adjustedY < -eps) quadrant = "Active but Dormant";
+
+  return quadrant;
+}
 
 const WorkspaceDashboard = () => {
   const { accountId } = useParams();
@@ -33,9 +93,53 @@ const WorkspaceDashboard = () => {
   const [search, setSearch] = useState("");
   const [regionFilter, setRegionFilter] = useState<string>("all");
   const [inactiveDaysFilter, setInactiveDaysFilter] = useState<string>("all");
+  const [account_info,set_account_info] = useState<Account | null>(null)
+  const [workspaceData, setWorkspaceData] = useState<WorkspaceResponse | null>(null);
+  useEffect(() => {
+      fetch("http://localhost:8000/workspace-level/account-data",{
+        method:"POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          account_id: accountId,
+          
+        }),
+      }).then(response => response.json() )
+      .then(data => {set_account_info(data)
+    console.log(data)}) 
+    .catch(() => window.alert("Data not found"))
+      
 
+  },[])
+
+  useEffect(() => {
+    fetch("http://localhost:8000/workspace-level/workspace-data", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        account_id: accountId,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then((data: WorkspaceResponse) => {
+        setWorkspaceData(data);
+        console.log(data)
+      })
+      .catch((err) => {
+        console.error("Error fetching workspace data:", err);
+      })
+    
+
+  },[])
   const account = accountLevelData.find((a) => a.account_id === accountId);
-  const allWorkspaces = workspaceLevelData.filter((w) => w.account_id === accountId);
+  const allWorkspaces = workspaceData?.workspaces ?? [];
+  const median_days_ago = workspaceData?.median_avg_days_ago ?? 0;
+  const median_inactivity = workspaceData?.median_avg_inactive_days ?? 0;
+  
 
   const workspaces = allWorkspaces.filter((workspace) => {
     const matchesSearch =
@@ -50,7 +154,13 @@ const WorkspaceDashboard = () => {
       (inactiveDaysFilter === "20+" && workspace.avg_inactive_days > 20);
     return matchesSearch && matchesRegion && matchesInactiveDays;
   });
-
+  if (!workspaceData) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Loading workspace data...</p>
+      </div>
+    );
+  }
   if (!account) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -65,12 +175,21 @@ const WorkspaceDashboard = () => {
     );
   }
 
-  const mostActive = allWorkspaces.reduce((prev, current) =>
-    prev.chat_count > current.chat_count ? prev : current
-  );
-  const mostInactive = allWorkspaces.reduce((prev, current) =>
-    prev.avg_inactive_days > current.avg_inactive_days ? prev : current
-  );
+  const mostActive =
+  allWorkspaces.length > 0
+    ? allWorkspaces.reduce((prev, current) =>
+        prev.chat_count > current.chat_count ? prev : current
+      )
+    : { workspace_name: "N/A" };
+
+const mostInactive =
+  allWorkspaces.length > 0
+    ? allWorkspaces.reduce((prev, current) =>
+        prev.avg_inactive_days > current.avg_inactive_days ? prev : current
+      )
+    : { workspace_name: "N/A" };
+
+
   const atRiskWorkspaces = allWorkspaces.filter(
     (w) => w.quadrant === "At Risk" || w.quadrant === "Inactive & Dormant"
   ).length;
@@ -106,8 +225,8 @@ const WorkspaceDashboard = () => {
           w.avg_inactive_days.toFixed(1),
           w.chat_count,
           `"${w.account_status}"`,
-          `"${w.quadrant}"`,
-          `"${w.risk_level}"`,
+          `"${getQuadrant(w.avg_inactive_days,w.avg_days_ago,workspaceData.median_avg_inactive_days ?? 0,workspaceData.median_avg_days_ago ?? 0)}"`,
+          `"${getRiskLevel(getQuadrant(w.avg_inactive_days,w.avg_days_ago,workspaceData.median_avg_inactive_days ?? 0,workspaceData.median_avg_days_ago ?? 0))}"`,
         ].join(",")
       ),
     ];
@@ -152,9 +271,9 @@ const WorkspaceDashboard = () => {
             <div className="flex items-center gap-3">
               <img src={gobblecubeLogo} alt="Gobblecube" className="w-12 h-12" />
               <div>
-                <h1 className="text-2xl font-bold">{account.account_name}</h1>
+                <h1 className="text-2xl font-bold">{account_info?.account_name}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Workspace-Level Analysis • {workspaces.length} workspaces
+                  Workspace-Level Analysis • {account_info?.total_workspaces} workspaces
                 </p>
               </div>
             </div>
@@ -172,19 +291,19 @@ const WorkspaceDashboard = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
-                <p className="text-lg font-semibold">{account.account_status}</p>
+                <p className="text-lg font-semibold">{account_info?.status}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Workspaces</p>
-                <p className="text-lg font-semibold">{account.workspace_count}</p>
+                <p className="text-lg font-semibold">{account_info?.total_workspaces}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Days Since Login</p>
-                <p className="text-lg font-semibold">{account.avg_days_ago.toFixed(1)}</p>
+                <p className="text-lg font-semibold">{account_info?.avg_days_since_login?.toFixed?.(2) ?? "N/A"}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Avg Inactive Days</p>
-                <p className="text-lg font-semibold">{account.avg_inactive_days.toFixed(1)}</p>
+                <p className="text-lg font-semibold">{account_info?.avg_inactive_days?.toFixed?.(2) ?? "N/A"}</p>
               </div>
             </div>
           </CardContent>
@@ -222,6 +341,8 @@ const WorkspaceDashboard = () => {
           data={allWorkspaces}
           title="Workspace Engagement Quadrant Analysis"
           type="workspace"
+          median_days_ago={workspaceData.median_avg_days_ago ?? 0}
+          median_inactivity={workspaceData.median_avg_inactive_days ?? 0}
         />
 
         {/* Workspace Table */}
@@ -295,9 +416,9 @@ const WorkspaceDashboard = () => {
                         <TableCell>
                           <Badge variant="outline">{workspace.account_status}</Badge>
                         </TableCell>
-                        <TableCell>{getQuadrantBadge(workspace.quadrant)}</TableCell>
+                        <TableCell>{getQuadrantBadge(getQuadrant(workspace.avg_inactive_days,workspace.avg_days_ago,workspaceData.median_avg_inactive_days ?? 0,workspaceData.median_avg_days_ago ?? 0))}</TableCell>
                         <TableCell>
-                          <Badge>{workspace.risk_level}</Badge>
+                          <Badge>{getRiskLevel(getQuadrant(workspace.avg_inactive_days,workspace.avg_days_ago,workspaceData.median_avg_inactive_days ?? 0,workspaceData.median_avg_days_ago ?? 0))}</Badge> 
                         </TableCell>
                       </TableRow>
                     ))}

@@ -21,13 +21,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {getRiskLevel} from "@/data/dummyData"
+import { getRiskLevel } from "@/data/dummyData"
 interface AccountTableProps {
   data: AccountData[];
   filterStatus?: string;
 }
 
+
+
+function getQuadrant(
+  avgInactiveDays: number,
+  avgDaysAgo: number,
+  medianInactive: number,
+  medianDaysAgo: number
+): string {
+  console.log("avg inactive"+avgInactiveDays,
+    "avgdayago"+avgDaysAgo,
+    "medianinactive"+medianInactive,
+    "mediandaysago"+medianDaysAgo)
+  const adjustedX = avgInactiveDays - medianInactive;
+  const adjustedY = avgDaysAgo - medianDaysAgo; 
+
+  const eps = 0.0001; // tolerance for boundary conditions
+  let quadrant = "Healthy (III)";
+
+  if (adjustedX >= -eps && adjustedY >= -eps) quadrant = "Inactive & Dormant";
+  else if (adjustedX < -eps && adjustedY >= -eps) quadrant = "At Risk";
+  else if (adjustedX < -eps && adjustedY < -eps) quadrant = "Healthy Accounts";
+  else if (adjustedX >= -eps && adjustedY < -eps) quadrant = "Active but Dormant";
+
+  return quadrant;
+}
+
+const calculateMedian = (values: number[]): number => {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[mid]
+    : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
 const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
+  const inactiveDays = data.map((d) => d.avg_inactive_days);
+  const daysAgo = data.map((d) => d.avg_days_ago);
+  const medianInactive = calculateMedian(inactiveDays);
+  const medianDaysAgo = calculateMedian(daysAgo);
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [sortField, setSortField] = useState<keyof AccountData>("account_name");
@@ -126,6 +165,7 @@ const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
 
 
   const getQuadrantBadge = (quadrant?: string) => {
+    console.log("Quadrant: "+ quadrant)
     const variants: Record<string, { color: string; className: string }> = {
       "Healthy Accounts": { color: "success", className: "bg-success/10 text-success border-success/20" },
       "Active but Dormant": { color: "warning", className: "bg-warning/10 text-warning border-warning/20" },
@@ -167,7 +207,7 @@ const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Regions</SelectItem>
-            <SelectItem value="Healthy">Healthy</SelectItem>
+            <SelectItem value="Healthy Accounts">Healthy</SelectItem>
             <SelectItem value="Active but Dormant">Active but Dormant</SelectItem>
             <SelectItem value="At Risk">At Risk</SelectItem>
             <SelectItem value="Inactive & Dormant">Inactive & Dormant</SelectItem>
@@ -240,7 +280,7 @@ const AccountTable = ({ data, filterStatus }: AccountTableProps) => {
                   <TableCell>
                     <Badge variant="outline">{account.account_status}</Badge>
                   </TableCell>
-                  <TableCell>{getQuadrantBadge(account.quadrant)}</TableCell>
+                  <TableCell>{getQuadrantBadge(getQuadrant(account.avg_inactive_days,account.avg_days_ago,medianInactive,medianDaysAgo)) }</TableCell>
                   <TableCell>{getRiskBadge(getRiskLevel(account.quadrant))}</TableCell>
                 </TableRow>
               ))
