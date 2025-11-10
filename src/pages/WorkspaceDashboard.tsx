@@ -96,7 +96,7 @@ const WorkspaceDashboard = () => {
   const [account_info,set_account_info] = useState<Account | null>(null)
   const [workspaceData, setWorkspaceData] = useState<WorkspaceResponse | null>(null);
   useEffect(() => {
-      fetch("http://localhost:8000/workspace-level/account-data",{
+      fetch(import.meta.env.VITE_BACKEND_URL+"/workspace-level/account-data",{
         method:"POST",
         headers: {
           "Content-Type": "application/json",
@@ -114,7 +114,7 @@ const WorkspaceDashboard = () => {
   },[])
 
   useEffect(() => {
-    fetch("http://localhost:8000/workspace-level/workspace-data", {
+    fetch(import.meta.env.VITE_BACKEND_URL+"/workspace-level/workspace-data", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

@@ -27,7 +27,7 @@ const Dashboard = () => {
   const [avgChat, setAvgChat] = useState(0);
   const [accountLevelData, setAccountLevelData] = useState([]);
   useEffect(() => {
-    fetch("http://localhost:8000/account-level/card-data")
+    fetch(import.meta.env.VITE_BACKEND_URL+`/account-level/card-data`)
     .then(response => response.json())
     .then(data => {
       console.log(data);
@@ -44,7 +44,8 @@ const Dashboard = () => {
 
 
   useEffect(() => {
-    fetch("http://localhost:8000/account-level/info")
+    console.log(import.meta.env.VITE_BACKEND_URL)
+    fetch(import.meta.env.VITE_BACKEND_URL+"/account-level/info")
     .then(response => response.json())
     .then(data => {
       console.log(data);
