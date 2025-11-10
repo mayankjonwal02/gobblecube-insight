@@ -86,7 +86,7 @@ const QuadrantScatter = ({ data, title, type ,median_days_ago ,median_inactivity
   const maxRange = Math.max(
     ...chartData.flatMap((d) => [Math.abs(d.x), Math.abs(d.y)])
   );
-  const [zoom, setZoom] = useState(4); // zoom factor
+  const [zoom, setZoom] = useState(6); // zoom factor
 
   const baseRange = Math.ceil(maxRange * 1.2) || 10;
   const range = baseRange / zoom;
